@@ -1,39 +1,27 @@
-name: Deploy Hexo Site to GitHub Pages
-
+name: Publish English blog migration
 on:
   push:
-    branches:
-      - master
-
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: english-blog-migration
+  cancel-in-progress: false
 jobs:
-  build-and-deploy:
+  redirect:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    timeout-minutes: 15
     steps:
-      - name: Checkout master branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          submodules: 'recursive' # Checkout theme submodule
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Generate Static Files
-        run: npm run build
-
-      - name: Deploy to main branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
-          publish_branch: main
-          user_name: 'Jaylin'
-          user_email: 'jaylon03.lee@gmail.com'
-          commit_message: 'chore: Deploy static site to GitHub Pages'
+          node-version: '24'
+      - run: node migration/build.mjs
+      - name: Publish migration and wait for Pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node migration/publish.mjs
